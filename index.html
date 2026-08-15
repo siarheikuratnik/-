@@ -420,7 +420,7 @@ updateDimBtn(); fitView(); updateUI();
       <div class="lgRow"><span class="sw" style="background:#2e7d5b;border-left:4px solid #ff4d4d"></span><span class="txt"><b style="color:#ff6b6b">Красная</b> — начальный замок. Ставится только в конец ряда / подряда</span></div>
       <div class="lgRow"><span class="sw" style="background:#2e7d5b;border-right:4px solid #9be15d"></span><span class="txt"><b style="color:#9be15d">Салатовая</b> — конечный замок. Ставится только в начало ряда / подряда</span></div>
       <div class="lgRow"><span class="sw" style="background:#2e7d5b"></span><span class="txt">Без полоски — резаная кромка без замка</span></div>
-      <div class="lgNote">Соединение возможно только «начальный + конечный». Кусок, резаный с двух сторон (без замков), используется только как единственный кусок короткого подряда. В вертикальной ориентации полоски на верхней и нижней кромке куска.</div>
+      <div class="lgNote">Соединение возможно только «начальный + конечный». Короткие подряды могут собираться из двух кусков с разными замками. В вертикальной ориентации полоски на верхней и нижней кромке куска.</div>
     </section>
     <section class="panel"><h3>Элементы чертежа</h3>
       <div class="lgRow"><span class="sw swOp"></span><span class="txt">Проём — не закрывается материалом, размер указан в мм</span></div>
@@ -428,10 +428,10 @@ updateDimBtn(); fitView(); updateUI();
       <div class="lgNote">Размер в мм подписан на каждом куске; значки: ✂ рез из новой · ♻ из обрезка · ⚠ вынужденный.</div>
     </section>
     <section class="panel"><h3>Правила расчёта</h3>
-      <div class="lgRow"><span class="txt">• Очередь 1 — стены без проёмов, длина ≤ длины заготовки<br>• Очередь 2 — стены без проёмов, длина &gt; длины заготовки<br>• Очередь 3 — стены с проёмами: ряд, пересекающий проём по всей высоте, делится на подряды; частичное пересечение считается целым рядом<br>• Последний неполный ряд считается как целый<br>• Смещение шва каждого ряда относительно предыдущего — в пределах мин.–макс. смещения<br>• Середина ряда — только целые заготовки; резаные куски — по краям ряда / подряда<br>• Каждый подряд проверяет перешивку независимо относительно первого шва предыдущего ряда</span></div>
+      <div class="lgRow"><span class="txt">• Очередь 1 — стены без проёмов, длина ≤ длины заготовки<br>• Очередь 2 — стены без проёмов, длина &gt; длины заготовки<br>• Очередь 3 — стены с проёмами: ряд, пересекающий проём по всей высоте, делится на подряды; частичное пересечение считается целым рядом<br>• Последний неполный ряд считается как целый<br>• Смещение шва каждого ряда относительно предыдущего — в пределах мин.–макс. смещения<br>• Середина ряда — только целые заготовки; резаные куски — по краям ряда / подряда<br>• Каждый подряд проверяет перешивку независимо относительно первого шва предыдущего ряда<br>• Короткие подряды могут собираться из двух кусков с разными замками<br>• Остатки от стен ≤ длины заготовки получают замки (нач./кон.) для использования в длинных рядах<br>• Мелочь &lt; мин. отрезка хранится отдельно и используется только для вынужденных коротких подрядов</span></div>
     </section>
     <section class="panel"><h3>Показатели сводки</h3>
-      <div class="lgRow"><span class="txt">• <b>Целые заготовки</b> — сколько новых досок израсходовано (главный результат)<br>• <b>Резы из новых</b> — куски, отрезанные от новых досок<br>• <b>Обрезков применено</b> — куски, взятые из базы остатков<br>• <b>Отходы</b> — остатки короче мин. отрезка<br>• <b>База отрезков</b> — нач. замок → конец ряда; кон. замок → начало ряда; без замков → короткие подряды</span></div>
+      <div class="lgRow"><span class="txt">• <b>Целые заготовки</b> — сколько новых досок израсходовано (главный результат)<br>• <b>Резы из новых</b> — куски, отрезанные от новых досок<br>• <b>Обрезков применено</b> — куски, взятые из базы остатков<br>• <b>Отходы</b> — остатки короче мин. отрезка, не использованные нигде<br>• <b>База отрезков</b> — нач. замок → конец ряда; кон. замок → начало ряда; без замков → короткие подряды; мелочь → вынужденные куски</span></div>
     </section>
   </div>
 </main>
@@ -447,7 +447,7 @@ $('btnOpen').onclick = () => $('fileInput').click();
 $('fileInput').onchange = e => { if (e.target.files[0]) readFile(e.target.files[0]); e.target.value = ''; };
 function getParams() { return { L: Math.max(1, +$('pL').value || 1380), W: Math.max(1, +$('pW').value || 192), minCut: Math.max(0, +$('pMinCut').value || 0), minOff: Math.max(0, +$('pMinOff').value || 0), maxOff: Math.max(0, +$('pMaxOff').value || 0) }; }
 function transformWall(w, P) { let len, hgt, ops; if (P.orientation === 'vert') { len = w.height; hgt = w.length; ops = w.openings.map(o => ({ x: w.height - o.y - o.h, y: o.x, w: o.h, h: o.w, ow: o.w, oh: o.h })); } else { len = w.length; hgt = w.height; ops = w.openings.map(o => ({ x: o.x, y: w.height - o.y - o.h, w: o.w, h: o.h, ow: o.w, oh: o.h })); } ops = ops.map(o => { const x1 = Math.max(0, Math.min(len, o.x)), x2 = Math.max(0, Math.min(len, o.x + o.w)); const y1 = Math.max(0, Math.min(hgt, o.y)), y2 = Math.max(0, Math.min(hgt, o.y + o.h)); return { x: x1, y: y1, w: x2 - x1, h: y2 - y1, ow: o.ow, oh: o.oh }; }).filter(o => o.w > 0 && o.h > 0); return { id: w.id, name: w.name, origLen: w.length, origH: w.height, len, hgt, ops, res: null }; }
-function recalc() { if (!state.walls.length) { state.result = null; updateUI(); return; } const P = Object.assign(getParams(), { orientation: state.orientation, direction: state.direction }); const ctx = { P, nextId: 1, db: { start: [], end: [], none: [] }, wholeUsed: 0, cutNew: 0, reused: 0, wasteCount: 0, wasteLen: 0 }; const tw = state.walls.map(w => transformWall(w, P)); const q1 = tw.filter(w => !w.ops.length && w.len <= P.L); const q2 = tw.filter(w => !w.ops.length && w.len > P.L); const q3 = tw.filter(w => w.ops.length > 0); for (const w of [...q1, ...q2, ...q3]) calcWall(w, ctx); state.result = { P, totalBoards: ctx.wholeUsed, cutNew: ctx.cutNew, reused: ctx.reused, wasteCount: ctx.wasteCount, wasteLen: Math.round(ctx.wasteLen), db: { start: ctx.db.start.map(p => p.len).sort((a, b) => b - a), end: ctx.db.end.map(p => p.len).sort((a, b) => b - a), none: ctx.db.none.map(p => p.len).sort((a, b) => b - a) }, walls: tw }; updateUI(); }
+function recalc() { if (!state.walls.length) { state.result = null; updateUI(); return; } const P = Object.assign(getParams(), { orientation: state.orientation, direction: state.direction }); const ctx = { P, nextId: 1, db: { start: [], end: [], none: [], forced: [] }, wholeUsed: 0, cutNew: 0, reused: 0, wasteCount: 0, wasteLen: 0 }; const tw = state.walls.map(w => transformWall(w, P)); const q1 = tw.filter(w => !w.ops.length && w.len <= P.L); const q2 = tw.filter(w => !w.ops.length && w.len > P.L); const q3 = tw.filter(w => w.ops.length > 0); for (const w of [...q1, ...q2, ...q3]) calcWall(w, ctx); state.result = { P, totalBoards: ctx.wholeUsed, cutNew: ctx.cutNew, reused: ctx.reused, wasteCount: ctx.wasteCount, wasteLen: Math.round(ctx.wasteLen), db: { start: ctx.db.start.map(p => p.len).sort((a, b) => b - a), end: ctx.db.end.map(p => p.len).sort((a, b) => b - a), none: ctx.db.none.map(p => p.len).sort((a, b) => b - a), forced: ctx.db.forced.map(p => p.len).sort((a, b) => b - a) }, walls: tw }; updateUI(); }
 
 function calcWall(w, ctx) {
     const P = ctx.P;
@@ -492,6 +492,124 @@ function findBestRemnant(list, need) {
         if (!best || p.len > best.len) best = p;
     }
     return best;
+}
+
+function solveShort(D, prevSeam, ctx) {
+    const P = ctx.P;
+    const forced = D < P.minCut;
+    const okOff = x => prevSeam == null || (Math.abs(x - prevSeam) >= P.minOff - 1e-9 && Math.abs(x - prevSeam) <= P.maxOff + 1e-9);
+    let best = null;
+
+    // Вариант 1: один кусок из базы
+    const allP = [];
+    for (const p of ctx.db.none) allP.push({ p, db: 'none' });
+    for (const p of ctx.db.start) allP.push({ p, db: 'start' });
+    for (const p of ctx.db.end) allP.push({ p, db: 'end' });
+    if (forced) for (const p of ctx.db.forced) allP.push({ p, db: 'forced' });
+    for (const c of allP) {
+        if (c.p.len < D) continue;
+        const rem = c.p.len - D;
+        const waste = (rem > 0 && rem < P.minCut) ? rem : 0;
+        const cuts = rem > 0 ? 1 : 0;
+        const cand = { boards: 0, waste, cuts, reuse: 1, kind: 'one', piece: c.p, db: c.db };
+        if (!best || better(cand, best)) best = cand;
+    }
+
+    // Вариант 2: два куска из базы (end + start)
+    if (!forced && D >= 2 * P.minCut) {
+        for (const pL of ctx.db.end) {
+            for (const pR of ctx.db.start) {
+                const xMin = Math.max(P.minCut, D - pR.len);
+                const xMax = Math.min(pL.len, D - P.minCut);
+                if (xMin > xMax) continue;
+                const xs = new Set();
+                xs.add(xMin); xs.add(xMax);
+                if (pL.len >= xMin && pL.len <= xMax) xs.add(pL.len);
+                if (D - pR.len >= xMin && D - pR.len <= xMax) xs.add(D - pR.len);
+                if (prevSeam != null) {
+                    for (const d of [P.minOff, P.maxOff, (P.minOff + P.maxOff) / 2]) {
+                        const v1 = Math.round(prevSeam + d), v2 = Math.round(prevSeam - d);
+                        if (v1 >= xMin && v1 <= xMax) xs.add(v1);
+                        if (v2 >= xMin && v2 <= xMax) xs.add(v2);
+                    }
+                }
+                for (const x0 of xs) {
+                    const x = Math.round(x0);
+                    if (x < xMin || x > xMax) continue;
+                    const y = D - x;
+                    if (y < P.minCut || y > pR.len) continue;
+                    if (prevSeam != null && !okOff(x)) continue;
+                    const remL = pL.len - x, remR = pR.len - y;
+                    let waste = 0;
+                    if (remL > 0 && remL < P.minCut) waste += remL;
+                    if (remR > 0 && remR < P.minCut) waste += remR;
+                    const cuts = (remL > 0 ? 1 : 0) + (remR > 0 ? 1 : 0);
+                    const cand = { boards: 0, waste, cuts, reuse: 2, kind: 'two', pL, pR, x, y };
+                    if (!best || better(cand, best)) best = cand;
+                }
+            }
+        }
+    }
+
+    // Вариант 3: рез из новой заготовки
+    {
+        const rem = P.L - D;
+        const waste = (rem > 0 && rem < P.minCut) ? rem : 0;
+        const cuts = rem > 0 ? 1 : 0;
+        const sS = ctx.db.start.length, sE = ctx.db.end.length;
+        const remType = sS <= sE ? 'start' : 'end';
+        const cand = { boards: 1, waste, cuts, reuse: 0, kind: 'new', remType };
+        if (!best || better(cand, best)) best = cand;
+    }
+
+    // Применяем лучший вариант
+    if (best.kind === 'one') {
+        const list = ctx.db[best.db];
+        list.splice(list.indexOf(best.piece), 1);
+        const rem = best.piece.len - D;
+        if (rem > 0) {
+            if (rem >= P.minCut) ctx.db.none.push({ id: ctx.nextId++, len: rem });
+            else ctx.db.forced.push({ id: ctx.nextId++, len: rem });
+        }
+        ctx.reused++;
+        const lbl = best.db === 'start' ? 'нач. замок' : best.db === 'end' ? 'кон. замок' : best.db === 'forced' ? 'мелочь' : 'без замков';
+        return { pieces: [{ len: D, src: 'reuse', from: best.piece.len, dbLabel: lbl, forced, lockL: best.db === 'start' ? 'S' : null, lockR: best.db === 'end' ? 'E' : null }], firstSeam: null };
+    }
+
+    if (best.kind === 'two') {
+        ctx.db.end.splice(ctx.db.end.indexOf(best.pL), 1);
+        ctx.db.start.splice(ctx.db.start.indexOf(best.pR), 1);
+        const remL = best.pL.len - best.x, remR = best.pR.len - best.y;
+        if (remL > 0) {
+            if (remL >= P.minCut) ctx.db.none.push({ id: ctx.nextId++, len: remL });
+            else ctx.db.forced.push({ id: ctx.nextId++, len: remL });
+        }
+        if (remR > 0) {
+            if (remR >= P.minCut) ctx.db.none.push({ id: ctx.nextId++, len: remR });
+            else ctx.db.forced.push({ id: ctx.nextId++, len: remR });
+        }
+        ctx.reused += 2;
+        return {
+            pieces: [
+                { len: best.x, src: 'reuse', from: best.pL.len, dbLabel: 'кон. замок', forced: false, lockL: null, lockR: 'E' },
+                { len: best.y, src: 'reuse', from: best.pR.len, dbLabel: 'нач. замок', forced: false, lockL: 'S', lockR: null }
+            ],
+            firstSeam: best.x
+        };
+    }
+
+    // kind === 'new'
+    ctx.wholeUsed++;
+    const rem = P.L - D;
+    if (rem > 0) {
+        ctx.cutNew++;
+        if (rem >= P.minCut) ctx.db[best.remType].push({ id: ctx.nextId++, len: rem });
+        else ctx.db.forced.push({ id: ctx.nextId++, len: rem });
+    }
+    if (rem === 0) return { pieces: [{ len: D, src: 'whole', forced: false, lockL: 'S', lockR: 'E' }], firstSeam: null };
+    const lockL = best.remType === 'end' ? 'S' : null;
+    const lockR = best.remType === 'start' ? 'E' : null;
+    return { pieces: [{ len: D, src: 'cut', forced, lockL, lockR }], firstSeam: null };
 }
 
 function evaluateS(s, D, ctx) {
@@ -547,7 +665,7 @@ function projectValid(s, sLo, sHi, prevSeam, P) {
 
 function solveRow(D, prevSeam, ctx) {
     const P = ctx.P;
-    if (D <= P.L) { const pc = obtainSingle(D, ctx); return { pieces: [pc], firstSeam: null }; }
+    if (D <= P.L) return solveShort(D, prevSeam, ctx);
     const okOff = S => prevSeam == null || (Math.abs(S - prevSeam) >= P.minOff - 1e-9 && Math.abs(S - prevSeam) <= P.maxOff + 1e-9);
     let best = null;
     if (D % P.L === 0 && okOff(P.L)) best = { kind: 'allWhole', boards: D / P.L, waste: 0, cuts: 0, reuse: 0 };
@@ -584,34 +702,6 @@ function solveRow(D, prevSeam, ctx) {
     return { pieces, firstSeam };
 }
 
-function obtainSingle(D, ctx) {
-    const P = ctx.P;
-    const cands = [];
-    for (const p of ctx.db.none) if (p.len >= D) cands.push({ p, db: 'none' });
-    for (const p of ctx.db.start) if (p.len >= D) cands.push({ p, db: 'start' });
-    for (const p of ctx.db.end) if (p.len >= D) cands.push({ p, db: 'end' });
-    const prio = { none: 0, start: 1, end: 1 };
-    cands.sort((a, b) => b.p.len - a.p.len || prio[a.db] - prio[b.db]);
-    if (cands.length) {
-        const c = cands[0], list = ctx.db[c.db];
-        list.splice(list.indexOf(c.p), 1);
-        const rem = c.p.len - D;
-        if (rem > 0) pushRemnant(ctx, 'none', rem);
-        ctx.reused++;
-        const lbl = c.db === 'start' ? 'нач. замок' : c.db === 'end' ? 'кон. замок' : 'без замков';
-        return { len: D, src: 'reuse', from: c.p.len, dbLabel: lbl, forced: D < P.minCut, lockL: null, lockR: null };
-    }
-    ctx.wholeUsed++;
-    const rem = P.L - D;
-    if (rem > 0) {
-        if (rem >= P.minCut) ctx.db.none.push({ id: ctx.nextId++, len: rem });
-        else { ctx.wasteCount++; ctx.wasteLen += rem; }
-    }
-    if (rem > 0) ctx.cutNew++;
-    if (rem === 0) return { len: D, src: 'whole', forced: false, lockL: 'S', lockR: 'E' };
-    return { len: D, src: 'cut', forced: D < P.minCut, lockL: null, lockR: null };
-}
-
 function better(a, b) {
     if (a.boards !== b.boards) return a.boards < b.boards;
     if (a.waste !== b.waste) return a.waste < b.waste;
@@ -627,29 +717,35 @@ function takeCut(pos, len, src, ctx) {
         if (idx >= 0) {
             list.splice(idx, 1);
             const rem = src.piece.len - len;
-            if (rem > 0) pushRemnant(ctx, 'none', rem);
+            if (rem > 0) {
+                if (rem >= P.minCut) ctx.db.none.push({ id: ctx.nextId++, len: rem });
+                else ctx.db.forced.push({ id: ctx.nextId++, len: rem });
+            }
             ctx.reused++;
             return { len, src: 'reuse', from: src.piece.len, dbLabel: listName === 'end' ? 'кон. замок' : 'нач. замок', forced: len < P.minCut, lockL: pos === 'start' ? null : 'S', lockR: pos === 'start' ? 'E' : null };
         }
     }
     ctx.wholeUsed++; ctx.cutNew++;
     const rem = P.L - len, type = pos === 'start' ? 'start' : 'end';
-    if (rem > 0) pushRemnant(ctx, type, rem);
+    if (rem > 0) {
+        if (rem >= P.minCut) ctx.db[type].push({ id: ctx.nextId++, len: rem });
+        else ctx.db.forced.push({ id: ctx.nextId++, len: rem });
+    }
     return { len, src: 'cut', forced: len < P.minCut, lockL: pos === 'start' ? null : 'S', lockR: pos === 'start' ? 'E' : null };
 }
 
 function pushRemnant(ctx, type, len) {
     if (len <= 0) return;
     if (len >= ctx.P.minCut) ctx.db[type].push({ id: ctx.nextId++, len });
-    else { ctx.wasteCount++; ctx.wasteLen += len; }
+    else ctx.db.forced.push({ id: ctx.nextId++, len });
 }
 
 function esc(s) { return String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
 function updateUI() { const res = state.result; $('boardsBadge').textContent = (res ? res.totalBoards : '—') + ' досок'; $('dirNote').textContent = state.orientation === 'vert' ? 'Вертикальная ориентация: стена повёрнута на 90°, «снизу» = справа.' : ''; renderWallList(); renderSummary(); renderDb(); renderDetails(); draw(); }
 function renderWallList() { const box = $('wallChips'); box.innerHTML = ''; state.walls.forEach((w, i) => { const res = state.result ? state.result.walls[i].res : null; const d = document.createElement('button'); d.className = 'wChip' + (i === state.sel ? ' sel' : ''); d.innerHTML = '<span class="wcName">' + esc(w.name) + '</span><span class="wcInfo">' + (res ? res.boards + ' досок · ♻' + res.reused : w.length + '×' + w.height) + '</span>'; d.onclick = () => { state.sel = i; fitView(); updateUI(); }; box.appendChild(d); }); }
 function chipsHtml(lens) { if (!lens.length) return '<span class="dim">—</span>'; const m = new Map(); lens.forEach(l => m.set(l, (m.get(l) || 0) + 1)); return [...m.entries()].sort((a, b) => b[0] - a[0]).map(en => '<span class="chip">' + en[0] + (en[1] > 1 ? ' ×' + en[1] : '') + '</span>').join(''); }
-function renderSummary() { const res = state.result, box = $('summary'); if (!res) { box.innerHTML = '<span class="dim">Нет данных</span>'; return; } const dbCnt = res.db.start.length + res.db.end.length + res.db.none.length; const dbLen = [...res.db.start, ...res.db.end, ...res.db.none].reduce((t, l) => t + l, 0); box.innerHTML = '<div class="sumBig"><b>' + res.totalBoards + '</b><span>целых заготовок</span></div><div class="statGrid"><div class="statCard"><div class="sv">' + res.cutNew + '</div><div class="sl">резов из новых</div></div><div class="statCard"><div class="sv">' + res.reused + '</div><div class="sl">обрезков применено</div></div><div class="statCard"><div class="sv">' + res.wasteCount + '</div><div class="sl">отходов, шт</div></div><div class="statCard"><div class="sv">' + res.wasteLen + '</div><div class="sl">отходов, мм</div></div></div><div class="sumLine">В базе остатков: ' + dbCnt + ' шт · ' + dbLen + ' мм</div>'; }
-function renderDb() { const res = state.result, box = $('dbPanel'); if (!res) { box.innerHTML = '<span class="dim">—</span>'; return; } box.innerHTML = '<span class="dbT">С начальным замком → в конец ряда</span>' + chipsHtml(res.db.start) + '<span class="dbT">С конечным замком → в начало ряда</span>' + chipsHtml(res.db.end) + '<span class="dbT">Без замков → только короткие подряды</span>' + chipsHtml(res.db.none); }
+function renderSummary() { const res = state.result, box = $('summary'); if (!res) { box.innerHTML = '<span class="dim">Нет данных</span>'; return; } const dbCnt = res.db.start.length + res.db.end.length + res.db.none.length + res.db.forced.length; const dbLen = [...res.db.start, ...res.db.end, ...res.db.none, ...res.db.forced].reduce((t, l) => t + l, 0); box.innerHTML = '<div class="sumBig"><b>' + res.totalBoards + '</b><span>целых заготовок</span></div><div class="statGrid"><div class="statCard"><div class="sv">' + res.cutNew + '</div><div class="sl">резов из новых</div></div><div class="statCard"><div class="sv">' + res.reused + '</div><div class="sl">обрезков применено</div></div><div class="statCard"><div class="sv">' + res.wasteCount + '</div><div class="sl">отходов, шт</div></div><div class="statCard"><div class="sv">' + res.wasteLen + '</div><div class="sl">отходов, мм</div></div></div><div class="sumLine">В базе остатков: ' + dbCnt + ' шт · ' + dbLen + ' мм</div>'; }
+function renderDb() { const res = state.result, box = $('dbPanel'); if (!res) { box.innerHTML = '<span class="dim">—</span>'; return; } box.innerHTML = '<span class="dbT">С начальным замком → в конец ряда</span>' + chipsHtml(res.db.start) + '<span class="dbT">С конечным замком → в начало ряда</span>' + chipsHtml(res.db.end) + '<span class="dbT">Без замков → короткие подряды</span>' + chipsHtml(res.db.none) + '<span class="dbT">Мелочь → вынужденные короткие куски</span>' + chipsHtml(res.db.forced); }
 function pieceToken(pc) { let cls = pc.src === 'whole' ? 'tkWhole' : pc.src === 'reuse' ? 'tkReuse' : 'tkCut'; let title; if (pc.src === 'whole') title = 'Целая заготовка ' + pc.len; else if (pc.src === 'reuse') title = 'Из обрезка БД (' + pc.dbLabel + '), было ' + pc.from + ' → отрезано ' + pc.len; else title = 'Рез из новой заготовки ' + pc.len; if (pc.forced) { cls += ' tkForced'; title += ' · ВЫНУЖДЕННЫЙ (короче мин. отрезка)'; } const mark = pc.src === 'cut' ? '✂' : pc.src === 'reuse' ? '♻' : ''; let style = ''; if (pc.lockL) style += 'border-left:3px solid ' + lockColor(pc.lockL) + ';'; if (pc.lockR) style += 'border-right:3px solid ' + lockColor(pc.lockR) + ';'; return '<span class="tk ' + cls + '" style="' + style + '" title="' + esc(title) + '">' + pc.len + mark + '</span>'; }
 function renderDetails() { const box = $('details'), tt = $('detTitle'); if (!state.result || state.sel < 0) { tt.textContent = 'Детали по рядам'; box.innerHTML = '<span class="dim">Выберите стену</span>'; return; } const w = state.result.walls[state.sel], res = w.res; tt.textContent = 'Ряды — ' + w.name; const dirName = state.direction === 'bottom' ? 'снизу' : 'сверху'; let html = '<div class="dim" style="margin-bottom:8px;font-size:12.5px">очередь ' + res.queue + ' · рядов ' + res.rows.length + ' · заготовок ' + res.boards + ' · ряды идут ' + dirName + '</div>'; for (const row of res.rows) { html += '<div class="rowBlock"><div class="rowHead">Ряд ' + (row.idx + 1) + (row.rowH < state.result.P.W ? ' <span class="dim">(высота ' + Math.round(row.rowH) + ' мм)</span>' : '') + '</div>'; for (const sr of row.subrows) { html += '<div class="srLine"><span class="srRange">' + Math.round(sr.x1) + '–' + Math.round(sr.x2) + '</span>' + sr.pieces.map(pieceToken).join('') + '</div>'; } html += '</div>'; } box.innerHTML = html; }
 function setTab(name) { state.tab = name; document.querySelectorAll('.tabBtn').forEach(b => b.classList.toggle('on', b.dataset.tab === name)); document.querySelectorAll('.tabPage').forEach(p => p.classList.toggle('show', p.dataset.page === name)); $('content').scrollTop = 0; }
