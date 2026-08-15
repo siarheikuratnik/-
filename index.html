@@ -81,8 +81,6 @@
   .zoomCtrls { position: absolute; right: 8px; top: 8px; display: flex; flex-direction: column; gap: 6px; z-index: 5; }
   .zoomCtrls button { width: 42px; height: 42px; font-size: 20px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,.4); }
   #zoomLbl { position: absolute; left: 8px; top: 8px; z-index: 5; background: rgba(30,32,40,.85); border: 1px solid #2c2f3a; border-radius: 7px; padding: 3px 9px; font-size: 11px; color: #aeb4c4; pointer-events: none; }
-  #dimBtn { position: absolute; left: 8px; bottom: 8px; z-index: 5; background: rgba(30,32,40,.9); border: 1px solid #3a3e4d; border-radius: 9px; color: #8a90a2; padding: 7px 12px; font-size: 12px; box-shadow: 0 2px 8px rgba(0,0,0,.4); }
-  #dimBtn.on { background: #35589f; border-color: #4a70c0; color: #fff; font-weight: 600; }
   #emptyMsg { position: absolute; inset: 0; z-index: 4; display: flex; align-items: center; justify-content: center; text-align: center; color: #666c7d; font-size: 14px; padding: 20px; pointer-events: none; }
   #wallChips { display: flex; gap: 8px; overflow-x: auto; flex-shrink: 0; padding: 8px 10px; background: #191b21; border-bottom: 1px solid #2c2f3a; scrollbar-width: none; }
   #wallChips::-webkit-scrollbar { display: none; }
@@ -134,7 +132,6 @@
   <canvas id="cv"></canvas>
   <div class="zoomCtrls"><button id="zoomIn">+</button><button id="zoomOut">−</button><button id="zoomFit" title="Вписать">⤢</button></div>
   <div id="zoomLbl">100%</div>
-  <button id="dimBtn">Размеры</button>
   <div id="emptyMsg">Добавьте стену кнопкой «＋ стена»<br>или откройте JSON кнопкой 📂</div>
 </section>
 <div id="wallChips"></div>
@@ -176,15 +173,14 @@
 </main>
 <script>
 'use strict';
-const DIM_ZOOM = 1.5;
-const state = { walls: [], nextWallId: 1, nextOpeningId: 1, selWallId: null, selOpeningId: null, dimOn: false, view: { zoom: .1, fitZoom: .1, ox: 60, oy: 60 }, history: [], fileName: 'walls.json' };
+const state = { walls: [], nextWallId: 1, nextOpeningId: 1, selWallId: null, selOpeningId: null, view: { zoom: .1, fitZoom: .1, ox: 60, oy: 60 }, history: [], fileName: 'walls.json' };
 const $ = id => document.getElementById(id);
 const cv = $('cv');
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const curWall = () => state.walls.find(w => w.id === state.selWallId) || null;
 const curOpening = () => { const w = curWall(); return w ? (w.openings.find(o => o.id === state.selOpeningId) || null) : null; };
-function dimsVisible() { if (state.dimOn) return true; return state.view.zoom / (state.view.fitZoom || 1) >= DIM_ZOOM; }
+function dimsVisible() { return true; }
 function snapshot() { return JSON.stringify({ walls: state.walls, nextWallId: state.nextWallId, nextOpeningId: state.nextOpeningId }); }
 function pushHistory() { const s = snapshot(); if (state.history[state.history.length - 1] === s) return; state.history.push(s); if (state.history.length > 60) state.history.shift(); $('btnUndo').style.opacity = 1; }
 function undo() { const s = state.history.pop(); if (!s) { updateUI(); return; } const d = JSON.parse(s); state.walls = d.walls; state.nextWallId = d.nextWallId; state.nextOpeningId = d.nextOpeningId; if (!curWall()) { state.selWallId = state.walls.length ? state.walls[0].id : null; state.selOpeningId = null; } else if (!curOpening()) state.selOpeningId = null; if (!state.history.length) $('btnUndo').style.opacity = .4; fitView(); updateUI(); }
@@ -196,7 +192,7 @@ function toWorld(cx, cy) { const rc = cv.getBoundingClientRect(), v = state.view
 function draw() { const c = cv.getContext('2d'), dpr = window.devicePixelRatio || 1; const cw = cv.clientWidth, ch = cv.clientHeight; if (cv.width !== Math.round(cw * dpr) || cv.height !== Math.round(ch * dpr)) { cv.width = Math.round(cw * dpr); cv.height = Math.round(ch * dpr); } c.setTransform(dpr, 0, 0, dpr, 0, 0); c.fillStyle = '#14151a'; c.fillRect(0, 0, cw, ch); const v = state.view; $('zoomLbl').textContent = Math.round(v.zoom / (v.fitZoom || 1) * 100) + '%'; const w = curWall(); $('emptyMsg').style.display = w ? 'none' : 'flex'; if (!w) return; drawGrid(c, cw, ch); const X = x => v.ox + x * v.zoom, Y = y => v.oy + y * v.zoom; drawWall(c, w, X, Y); if (dimsVisible()) drawDims(c, w, X, Y); }
 function drawGrid(c, cw, ch) { const v = state.view; let step = 500; while (step * v.zoom < 24) step *= 2; c.strokeStyle = 'rgba(255,255,255,.045)'; c.lineWidth = 1; const wx0 = Math.floor((-v.ox / v.zoom) / step) * step, wx1 = (cw - v.ox) / v.zoom; for (let x = wx0; x <= wx1; x += step) { const sx = v.ox + x * v.zoom; c.beginPath(); c.moveTo(sx, 0); c.lineTo(sx, ch); c.stroke(); } const wy0 = Math.floor((-v.oy / v.zoom) / step) * step, wy1 = (ch - v.oy) / v.zoom; for (let y = wy0; y <= wy1; y += step) { const sy = v.oy + y * v.zoom; c.beginPath(); c.moveTo(0, sy); c.lineTo(cw, sy); c.stroke(); } }
 function drawWall(c, w, X, Y) { const z = state.view.zoom; const x = X(0), y = Y(0), ww = w.length * z, hh = w.height * z; c.fillStyle = '#232530'; c.fillRect(x, y, ww, hh); for (const o of w.openings) drawOpening(c, w, o, X, Y); c.lineWidth = 2; c.strokeStyle = '#6a7080'; c.strokeRect(x + .5, y + .5, ww - 1, hh - 1); if (z > .02) { c.fillStyle = '#aeb4c4'; c.font = '12px sans-serif'; c.textAlign = 'center'; c.textBaseline = 'bottom'; c.fillText(w.name + ' — ' + w.length + '×' + w.height, x + ww / 2, y - 8); } }
-function drawOpening(c, w, o, X, Y) { const z = state.view.zoom; const ox = X(o.x), oy = Y(w.height - o.y - o.h); const ww = o.w * z, hh = o.h * z; const sel = o.id === state.selOpeningId; const showDims = dimsVisible(); c.fillStyle = 'rgba(10,11,15,.85)'; c.fillRect(ox, oy, ww, hh); c.save(); c.beginPath(); c.rect(ox, oy, ww, hh); c.clip(); c.strokeStyle = 'rgba(255,255,255,.08)'; c.lineWidth = 1; for (let i = -hh; i < ww; i += 14) { c.beginPath(); c.moveTo(ox + i, oy + hh); c.lineTo(ox + i + hh, oy); c.stroke(); } c.restore(); if (sel) { c.strokeStyle = '#ffb84d'; c.lineWidth = 2.5; c.setLineDash([]); } else { c.strokeStyle = '#565b6b'; c.lineWidth = 1.2; c.setLineDash([5, 4]); } c.strokeRect(ox + .5, oy + .5, ww - 1, hh - 1); c.setLineDash([]); if (o.locked && ww > 20 && hh > 18) { c.font = '12px sans-serif'; c.textAlign = 'right'; c.textBaseline = 'top'; c.fillText('🔒', ox + ww - 4, oy + 3); } if (sel && !showDims && ww > 48 && hh > 16) { c.font = '11px sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.lineWidth = 3; c.strokeStyle = 'rgba(0,0,0,.6)'; c.strokeText(o.w + '×' + o.h, ox + ww / 2, oy + hh / 2); c.fillStyle = '#ffd9a0'; c.fillText(o.w + '×' + o.h, ox + ww / 2, oy + hh / 2); } }
+function drawOpening(c, w, o, X, Y) { const z = state.view.zoom; const ox = X(o.x), oy = Y(w.height - o.y - o.h); const ww = o.w * z, hh = o.h * z; const sel = o.id === state.selOpeningId; c.fillStyle = 'rgba(10,11,15,.85)'; c.fillRect(ox, oy, ww, hh); c.save(); c.beginPath(); c.rect(ox, oy, ww, hh); c.clip(); c.strokeStyle = 'rgba(255,255,255,.08)'; c.lineWidth = 1; for (let i = -hh; i < ww; i += 14) { c.beginPath(); c.moveTo(ox + i, oy + hh); c.lineTo(ox + i + hh, oy); c.stroke(); } c.restore(); if (sel) { c.strokeStyle = '#ffb84d'; c.lineWidth = 2.5; c.setLineDash([]); } else { c.strokeStyle = '#565b6b'; c.lineWidth = 1.2; c.setLineDash([5, 4]); } c.strokeRect(ox + .5, oy + .5, ww - 1, hh - 1); c.setLineDash([]); if (o.locked && ww > 20 && hh > 18) { c.font = '12px sans-serif'; c.textAlign = 'right'; c.textBaseline = 'top'; c.fillText('🔒', ox + ww - 4, oy + 3); } if (sel && ww > 48 && hh > 16) { c.font = '11px sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.lineWidth = 3; c.strokeStyle = 'rgba(0,0,0,.6)'; c.strokeText(o.w + '×' + o.h, ox + ww / 2, oy + hh / 2); c.fillStyle = '#ffd9a0'; c.fillText(o.w + '×' + o.h, ox + ww / 2, oy + hh / 2); } }
 const DIM_COL = '#8fa3c8', DIM_TXT = '#cfe0ff';
 function dimText(c, label, sx, sy, major, rotate) { c.save(); c.translate(sx, sy); if (rotate) c.rotate(-Math.PI / 2); c.font = (major ? '12.5px' : '11px') + ' sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.lineWidth = 3; c.strokeStyle = 'rgba(0,0,0,.72)'; c.strokeText(label, 0, 0); c.fillStyle = DIM_TXT; c.fillText(label, 0, 0); c.restore(); }
 function dimH(c, x1, x2, yw, label, X, Y, major) { const sx1 = X(x1), sx2 = X(x2), sy = Y(yw); c.strokeStyle = DIM_COL; c.lineWidth = major ? 1.5 : 1; c.beginPath(); c.moveTo(sx1, sy); c.lineTo(sx2, sy); c.stroke(); c.beginPath(); c.moveTo(sx1, sy - 5); c.lineTo(sx1, sy + 5); c.moveTo(sx2, sy - 5); c.lineTo(sx2, sy + 5); c.stroke(); if (Math.abs(sx2 - sx1) > 26) dimText(c, label, (sx1 + sx2) / 2, sy - 9, major, false); }
@@ -235,8 +231,6 @@ splitter.addEventListener('touchstart', e => { e.preventDefault(); splitStart(e.
 window.addEventListener('touchmove', e => { if (splitDrag) { e.preventDefault(); splitMove(e.touches[0].clientY); } }, { passive: false });
 splitter.addEventListener('touchend', splitEnd); splitter.addEventListener('touchcancel', splitEnd);
 function reclampCenter() { const center = $('center'); const h = center.getBoundingClientRect().height; if (h > splitMax()) center.style.height = splitMax() + 'px'; else if (h < SPLIT_MIN) center.style.height = SPLIT_MIN + 'px'; }
-function updateDimBtn() { $('dimBtn').classList.toggle('on', state.dimOn); $('dimBtn').textContent = state.dimOn ? '✓ Размеры' : 'Размеры'; }
-$('dimBtn').onclick = () => { state.dimOn = !state.dimOn; updateDimBtn(); draw(); };
 window.addEventListener('keydown', e => { if (e.target && /INPUT|TEXTAREA/.test(e.target.tagName)) return; if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') { e.preventDefault(); undo(); } else if (e.key === 'Delete' && state.selOpeningId !== null) delOpening(); });
 function clampOpenings(w) { for (const o of w.openings) { o.w = clamp(o.w, 1, w.length); o.h = clamp(o.h, 1, w.height); o.x = clamp(o.x, 0, w.length - o.w); o.y = clamp(o.y, 0, w.height - o.h); } }
 function addWall() { pushHistory(); const w = { id: state.nextWallId++, name: 'стена ' + (state.walls.length + 1), length: 3000, height: 2700, openings: [] }; state.walls.push(w); state.selWallId = w.id; state.selOpeningId = null; setTab('wall'); fitView(); updateUI(); }
@@ -272,7 +266,7 @@ $('btnOpen').onclick = () => $('fileInput').click();
 $('fileInput').onchange = e => { if (e.target.files[0]) readFile(e.target.files[0]); e.target.value = ''; };
 window.addEventListener('resize', () => { reclampCenter(); fitView(); draw(); });
 window.addEventListener('orientationchange', () => setTimeout(() => { reclampCenter(); fitView(); draw(); }, 250));
-updateDimBtn(); fitView(); updateUI();
+fitView(); updateUI();
 <\/script>
 </body>
 </html>
@@ -301,21 +295,15 @@ updateDimBtn(); fitView(); updateUI();
   button { background: #2a2d38; border: 1px solid #3a3e4d; color: #dfe2ea; border-radius: 10px; cursor: pointer; font-size: 14px; }
   button:active { background: #343848; }
   .iconBtn { width: 42px; height: 42px; font-size: 18px; flex-shrink: 0; }
-  #center { position: relative; height: 40vh; height: 40dvh; min-height: 235px; background: #14151a; flex-shrink: 0; }
+  #center { position: relative; height: 40vh; height: 40dvh; min-height: 200px; background: #4d5462; flex-shrink: 0; }
   canvas { position: absolute; inset: 0; width: 100%; height: 100%; touch-action: none; }
   .zoomCtrls { position: absolute; right: 8px; top: 8px; display: flex; flex-direction: column; gap: 6px; z-index: 5; }
   .zoomCtrls button { width: 42px; height: 42px; font-size: 20px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,.4); }
   #zoomLbl { position: absolute; left: 8px; top: 8px; z-index: 5; background: rgba(30,32,40,.85); border: 1px solid #2c2f3a; border-radius: 7px; padding: 3px 9px; font-size: 11px; color: #aeb4c4; pointer-events: none; }
-  #legend { position: absolute; left: 8px; bottom: 6px; z-index: 5; display: flex; gap: 8px; font-size: 10px; color: #c3c8d4; flex-wrap: wrap; max-width: 75%; background: rgba(30,32,40,.88); border: 1px solid #2c2f3a; padding: 4px 9px; border-radius: 7px; pointer-events: none; }
-  .lg { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 4px; vertical-align: -1px; }
-  #emptyMsg { position: absolute; inset: 0; z-index: 4; display: flex; align-items: center; justify-content: center; text-align: center; color: #666c7d; font-size: 14px; padding: 20px; pointer-events: none; }
-  #wallChips { display: flex; gap: 8px; overflow-x: auto; flex-shrink: 0; padding: 8px 10px; background: #191b21; border-bottom: 1px solid #2c2f3a; scrollbar-width: none; }
-  #wallChips::-webkit-scrollbar { display: none; }
-  .wChip { flex: 0 0 auto; background: #23252e; border: 1px solid #3a3e4d; color: #dfe2ea; border-radius: 11px; padding: 7px 13px; text-align: left; min-height: 46px; }
-  .wChip.sel { background: #263054; border-color: #4a70c0; }
-  .wcName { font-weight: 700; font-size: 13.5px; display: block; }
-  .wcInfo { font-size: 11px; color: #9aa1b2; display: block; margin-top: 1px; }
-  .wChip.sel .wcInfo { color: #b9c6e8; }
+  #emptyMsg { position: absolute; inset: 0; z-index: 4; display: flex; align-items: center; justify-content: center; text-align: center; color: #c3c8d4; font-size: 14px; padding: 20px; pointer-events: none; }
+  #vSplitter { height: 18px; flex-shrink: 0; cursor: row-resize; display: flex; align-items: center; justify-content: center; background: #191b21; border-top: 1px solid #2c2f3a; border-bottom: 1px solid #2c2f3a; touch-action: none; }
+  #vSplitter .grip { width: 48px; height: 4px; border-radius: 2px; background: #4a5060; }
+  #vSplitter:active .grip { background: #4a70c0; }
   #tabbar { display: flex; background: #1e2028; border-bottom: 1px solid #2c2f3a; flex-shrink: 0; }
   .tabBtn { flex: 1; padding: 10px 1px 8px; font-size: 11.5px; background: none; border: none; color: #8a90a2; border-bottom: 2px solid transparent; border-radius: 0; min-height: 44px; }
   .tabBtn.on { color: #fff; border-bottom-color: #4a70c0; background: #232736; font-weight: 600; }
@@ -345,6 +333,7 @@ updateDimBtn(); fitView(); updateUI();
   .dbT { display: block; margin: 10px 0 4px; color: #c3c8d4; font-size: 12.5px; }
   .dbT:first-child { margin-top: 0; }
   .chip { background: #2a2d38; border: 1px solid #3a3e4d; border-radius: 6px; padding: 3px 9px; margin: 2px 3px 2px 0; display: inline-block; font-size: 13px; }
+  .wallHead { margin-top: 12px; font-weight: 700; color: #ffcf6e; font-size: 14px; }
   .rowBlock { margin-bottom: 10px; padding-bottom: 8px; border-bottom: 1px dashed #2c2f3a; }
   .rowBlock:last-child { border-bottom: none; }
   .rowHead { color: #aeb4c4; font-size: 13px; margin-bottom: 3px; font-weight: 600; }
@@ -373,16 +362,9 @@ updateDimBtn(); fitView(); updateUI();
   <canvas id="cv"></canvas>
   <div class="zoomCtrls"><button id="zoomIn">+</button><button id="zoomOut">−</button><button id="zoomFit" title="Вписать">⤢</button></div>
   <div id="zoomLbl">100%</div>
-  <div id="legend">
-    <span><i class="lg" style="background:#2e7d5b"></i>целая</span>
-    <span><i class="lg" style="background:#c07a2e"></i>рез</span>
-    <span><i class="lg" style="background:#6a5fc7"></i>обрезок</span>
-    <span><i class="lg" style="background:#2e7d5b;border-left:3px solid #ff4d4d"></i>нач. замок</span>
-    <span><i class="lg" style="background:#2e7d5b;border-right:3px solid #9be15d"></i>кон. замок</span>
-  </div>
   <div id="emptyMsg">Откройте JSON из wall_editor<br>кнопкой 📂 сверху</div>
 </section>
-<div id="wallChips"></div>
+<div id="vSplitter"><div class="grip"></div></div>
 <nav id="tabbar">
   <button class="tabBtn" data-tab="params">Параметры</button>
   <button class="tabBtn on" data-tab="summary">Итог</button>
@@ -397,9 +379,6 @@ updateDimBtn(); fitView(); updateUI();
       <div class="pGrid">
         <div class="pCell"><label>Длина, мм</label><input type="number" id="pL" value="1380" min="1" inputmode="numeric"></div>
         <div class="pCell"><label>Ширина, мм</label><input type="number" id="pW" value="192" min="1" inputmode="numeric"></div>
-        <div class="pCell"><label>Мин. отрезок, мм</label><input type="number" id="pMinCut" value="200" min="0" inputmode="numeric"></div>
-        <div class="pCell"><label>Мин. смещение, мм</label><input type="number" id="pMinOff" value="300" min="0" inputmode="numeric"></div>
-        <div class="pCell"><label>Макс. смещение, мм</label><input type="number" id="pMaxOff" value="1080" min="0" inputmode="numeric"></div>
       </div>
       <div class="segRowM"><span class="lbl">Ориентация рядов</span><div class="segFull"><button id="oH" class="on">Горизонтально</button><button id="oV">Вертикально</button></div></div>
       <div class="segRowM"><span class="lbl">Ряды считать</span><div class="segFull"><button id="dH" class="on">Снизу</button><button id="dT">Сверху</button></div></div>
@@ -407,7 +386,7 @@ updateDimBtn(); fitView(); updateUI();
     </section>
   </div>
   <div class="tabPage show" data-page="summary"><section class="panel"><h3>Сводка</h3><div id="summary"><span class="dim">Нет данных</span></div></section></div>
-  <div class="tabPage" data-page="rows"><section class="panel"><h3 id="detTitle">Детали по рядам</h3><div id="details"><span class="dim">Выберите стену</span></div></section></div>
+  <div class="tabPage" data-page="rows"><section class="panel"><h3 id="detTitle">Детали по рядам</h3><div id="details"><span class="dim">Нет данных</span></div></section></div>
   <div class="tabPage" data-page="db"><section class="panel"><h3>База отрезков</h3><div id="dbPanel"><span class="dim">—</span></div></section></div>
   <div class="tabPage" data-page="legend">
     <section class="panel"><h3>Куски в рядах</h3>
@@ -428,31 +407,33 @@ updateDimBtn(); fitView(); updateUI();
       <div class="lgNote">Размер в мм подписан на каждом куске; значки: ✂ рез из новой · ♻ из обрезка · ⚠ вынужденный.</div>
     </section>
     <section class="panel"><h3>Правила расчёта</h3>
-      <div class="lgRow"><span class="txt">• Очередь 1 — стены без проёмов, длина ≤ длины заготовки<br>• Очередь 2 — стены без проёмов, длина &gt; длины заготовки<br>• Очередь 3 — стены с проёмами: ряд, пересекающий проём по всей высоте, делится на подряды; частичное пересечение считается целым рядом<br>• Последний неполный ряд считается как целый<br>• Смещение шва каждого ряда относительно предыдущего — в пределах мин.–макс. смещения<br>• Середина ряда — только целые заготовки; резаные куски — по краям ряда / подряда<br>• Каждый подряд проверяет перешивку независимо относительно первого шва предыдущего ряда<br>• Короткие подряды могут собираться из двух кусков с разными замками<br>• Остатки от стен ≤ длины заготовки получают замки (нач./кон.) для использования в длинных рядах<br>• Мелочь &lt; мин. отрезка хранится отдельно и используется только для вынужденных коротких подрядов</span></div>
+      <div class="lgRow"><span class="txt">• Стены рассчитываются в порядке добавления: первая добавленная — первая считается, вторая — вторая и т.д.<br>• База отрезков общая для всех стен: остатки от предыдущих стен доступны для следующих<br>• Ряд, пересекающий проём по всей высоте, делится на подряды; частичное пересечение считается целым рядом<br>• Последний неполный ряд считается как целый<br>• Смещение шва каждого ряда относительно предыдущего — в пределах мин.–макс. смещения<br>• Середина ряда — только целые заготовки; резаные куски — по краям ряда / подряда<br>• Каждый подряд проверяет перешивку независимо относительно первого шва предыдущего ряда<br>• Короткие подряды могут собираться из двух кусков с разными замками<br>• Остатки от стен ≤ длины заготовки получают замки (нач./кон.) для использования в длинных рядах<br>• Мелочь &lt; мин. отрезка хранится отдельно и используется только для вынужденных коротких подрядов</span></div>
     </section>
     <section class="panel"><h3>Показатели сводки</h3>
-      <div class="lgRow"><span class="txt">• <b>Целые заготовки</b> — сколько новых досок израсходовано (главный результат)<br>• <b>Резы из новых</b> — куски, отрезанные от новых досок<br>• <b>Обрезков применено</b> — куски, взятые из базы остатков<br>• <b>Отходы</b> — остатки короче мин. отрезка, не использованные нигде<br>• <b>База отрезков</b> — нач. замок → конец ряда; кон. замок → начало ряда; без замков → короткие подряды; мелочь → вынужденные куски</span></div>
+      <div class="lgRow"><span class="txt">• <b>Целые заготовки</b> — сколько новых досок израсходовано (главный результат)<br>• <b>м² стен</b> — суммарная площадь стен за вычетом проёмов<br>• <b>м² заготовок</b> — площадь всех израсходованных досок<br>• <b>м² отходов</b> — м² заготовок минус м² стен<br>• <b>База отрезков</b> — нач. замок → конец ряда; кон. замок → начало ряда; без замков → короткие подряды; мелочь → вынужденные куски</span></div>
     </section>
   </div>
 </main>
 <script>
 'use strict';
-const state = { walls: [], sel: -1, tab: 'summary', orientation: 'horiz', direction: 'bottom', result: null, view: { zoom: 1, fitZoom: 1, ox: 0, oy: 0 } };
+const MIN_CUT = 150, MIN_OFF = 300, MAX_OFF = 1080;
+const state = { walls: [], tab: 'summary', orientation: 'horiz', direction: 'bottom', result: null, view: { zoom: 1, fitZoom: 1, ox: 0, oy: 0 } };
 const $ = id => document.getElementById(id);
+const clampC = (v, a, b) => Math.max(a, Math.min(b, v));
 const LOCK_S = '#ff4d4d', LOCK_E = '#9be15d';
 const lockColor = k => k === 'S' ? LOCK_S : k === 'E' ? LOCK_E : null;
-function loadJSON(text) { let data; try { data = JSON.parse(text); } catch (e) { alert('Ошибка JSON: ' + e.message); return; } let walls = Array.isArray(data) ? data : data.walls; if (!Array.isArray(walls)) { alert('В файле не найден массив walls'); return; } state.walls = walls.map((w, i) => ({ id: w.id ?? i, name: w.name || ('Стена ' + (i + 1)), length: +w.length || 0, height: +w.height || 0, openings: (w.openings || []).map(o => ({ x: +o.x || 0, y: +o.y || 0, w: +(o.w ?? o.width) || 0, h: +(o.h ?? o.height) || 0 })).filter(o => o.w > 0 && o.h > 0) })).filter(w => w.length > 0 && w.height > 0); state.sel = state.walls.length ? 0 : -1; recalc(); fitView(); }
+function loadJSON(text) { let data; try { data = JSON.parse(text); } catch (e) { alert('Ошибка JSON: ' + e.message); return; } let walls = Array.isArray(data) ? data : data.walls; if (!Array.isArray(walls)) { alert('В файле не найден массив walls'); return; } state.walls = walls.map((w, i) => ({ id: w.id ?? i, name: w.name || ('Стена ' + (i + 1)), length: +w.length || 0, height: +w.height || 0, openings: (w.openings || []).map(o => ({ x: +o.x || 0, y: +o.y || 0, w: +(o.w ?? o.width) || 0, h: +(o.h ?? o.height) || 0 })).filter(o => o.w > 0 && o.h > 0) })).filter(w => w.length > 0 && w.height > 0); recalc(); fitView(); }
 function readFile(f) { const r = new FileReader(); r.onload = () => loadJSON(r.result); r.readAsText(f); }
 $('btnOpen').onclick = () => $('fileInput').click();
 $('fileInput').onchange = e => { if (e.target.files[0]) readFile(e.target.files[0]); e.target.value = ''; };
-function getParams() { return { L: Math.max(1, +$('pL').value || 1380), W: Math.max(1, +$('pW').value || 192), minCut: Math.max(0, +$('pMinCut').value || 0), minOff: Math.max(0, +$('pMinOff').value || 0), maxOff: Math.max(0, +$('pMaxOff').value || 0) }; }
+function getParams() { return { L: Math.max(1, +$('pL').value || 1380), W: Math.max(1, +$('pW').value || 192), minCut: MIN_CUT, minOff: MIN_OFF, maxOff: MAX_OFF }; }
 function transformWall(w, P) { let len, hgt, ops; if (P.orientation === 'vert') { len = w.height; hgt = w.length; ops = w.openings.map(o => ({ x: w.height - o.y - o.h, y: o.x, w: o.h, h: o.w, ow: o.w, oh: o.h })); } else { len = w.length; hgt = w.height; ops = w.openings.map(o => ({ x: o.x, y: w.height - o.y - o.h, w: o.w, h: o.h, ow: o.w, oh: o.h })); } ops = ops.map(o => { const x1 = Math.max(0, Math.min(len, o.x)), x2 = Math.max(0, Math.min(len, o.x + o.w)); const y1 = Math.max(0, Math.min(hgt, o.y)), y2 = Math.max(0, Math.min(hgt, o.y + o.h)); return { x: x1, y: y1, w: x2 - x1, h: y2 - y1, ow: o.ow, oh: o.oh }; }).filter(o => o.w > 0 && o.h > 0); return { id: w.id, name: w.name, origLen: w.length, origH: w.height, len, hgt, ops, res: null }; }
-function recalc() { if (!state.walls.length) { state.result = null; updateUI(); return; } const P = Object.assign(getParams(), { orientation: state.orientation, direction: state.direction }); const ctx = { P, nextId: 1, db: { start: [], end: [], none: [], forced: [] }, wholeUsed: 0, cutNew: 0, reused: 0, wasteCount: 0, wasteLen: 0 }; const tw = state.walls.map(w => transformWall(w, P)); const q1 = tw.filter(w => !w.ops.length && w.len <= P.L); const q2 = tw.filter(w => !w.ops.length && w.len > P.L); const q3 = tw.filter(w => w.ops.length > 0); for (const w of [...q1, ...q2, ...q3]) calcWall(w, ctx); state.result = { P, totalBoards: ctx.wholeUsed, cutNew: ctx.cutNew, reused: ctx.reused, wasteCount: ctx.wasteCount, wasteLen: Math.round(ctx.wasteLen), db: { start: ctx.db.start.map(p => p.len).sort((a, b) => b - a), end: ctx.db.end.map(p => p.len).sort((a, b) => b - a), none: ctx.db.none.map(p => p.len).sort((a, b) => b - a), forced: ctx.db.forced.map(p => p.len).sort((a, b) => b - a) }, walls: tw }; updateUI(); }
+function recalc() { if (!state.walls.length) { state.result = null; updateUI(); return; } const P = Object.assign(getParams(), { orientation: state.orientation, direction: state.direction }); const ctx = { P, nextId: 1, db: { start: [], end: [], none: [], forced: [] }, wholeUsed: 0, cutNew: 0, reused: 0, wasteCount: 0, wasteLen: 0 }; const tw = state.walls.map(w => transformWall(w, P)); tw.forEach((w, idx) => calcWall(w, ctx, idx + 1)); state.result = { P, totalBoards: ctx.wholeUsed, cutNew: ctx.cutNew, reused: ctx.reused, wasteCount: ctx.wasteCount, wasteLen: Math.round(ctx.wasteLen), db: { start: ctx.db.start.map(p => p.len).sort((a, b) => b - a), end: ctx.db.end.map(p => p.len).sort((a, b) => b - a), none: ctx.db.none.map(p => p.len).sort((a, b) => b - a), forced: ctx.db.forced.map(p => p.len).sort((a, b) => b - a) }, walls: tw }; updateUI(); }
 
-function calcWall(w, ctx) {
+function calcWall(w, ctx, orderNum) {
     const P = ctx.P;
     const rowsTotal = Math.max(1, Math.ceil(w.hgt / P.W - 1e-9));
-    const wallRes = { queue: w.ops.length ? 3 : (w.len <= P.L ? 1 : 2), rows: [], boards0: ctx.wholeUsed, reuse0: ctx.reused, cut0: ctx.cutNew };
+    const wallRes = { queue: orderNum, rows: [], boards0: ctx.wholeUsed, reuse0: ctx.reused, cut0: ctx.cutNew };
     let prevSeam = null;
     for (let i = 0; i < rowsTotal; i++) {
         let yTop, rowH;
@@ -500,7 +481,6 @@ function solveShort(D, prevSeam, ctx) {
     const okOff = x => prevSeam == null || (Math.abs(x - prevSeam) >= P.minOff - 1e-9 && Math.abs(x - prevSeam) <= P.maxOff + 1e-9);
     let best = null;
 
-    // Вариант 1: один кусок из базы
     const allP = [];
     for (const p of ctx.db.none) allP.push({ p, db: 'none' });
     for (const p of ctx.db.start) allP.push({ p, db: 'start' });
@@ -515,7 +495,6 @@ function solveShort(D, prevSeam, ctx) {
         if (!best || better(cand, best)) best = cand;
     }
 
-    // Вариант 2: два куска из базы (end + start)
     if (!forced && D >= 2 * P.minCut) {
         for (const pL of ctx.db.end) {
             for (const pR of ctx.db.start) {
@@ -551,7 +530,6 @@ function solveShort(D, prevSeam, ctx) {
         }
     }
 
-    // Вариант 3: рез из новой заготовки
     {
         const rem = P.L - D;
         const waste = (rem > 0 && rem < P.minCut) ? rem : 0;
@@ -562,7 +540,6 @@ function solveShort(D, prevSeam, ctx) {
         if (!best || better(cand, best)) best = cand;
     }
 
-    // Применяем лучший вариант
     if (best.kind === 'one') {
         const list = ctx.db[best.db];
         list.splice(list.indexOf(best.piece), 1);
@@ -598,7 +575,6 @@ function solveShort(D, prevSeam, ctx) {
         };
     }
 
-    // kind === 'new'
     ctx.wholeUsed++;
     const rem = P.L - D;
     if (rem > 0) {
@@ -741,21 +717,138 @@ function pushRemnant(ctx, type, len) {
 }
 
 function esc(s) { return String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
-function updateUI() { const res = state.result; $('boardsBadge').textContent = (res ? res.totalBoards : '—') + ' досок'; $('dirNote').textContent = state.orientation === 'vert' ? 'Вертикальная ориентация: стена повёрнута на 90°, «снизу» = справа.' : ''; renderWallList(); renderSummary(); renderDb(); renderDetails(); draw(); }
-function renderWallList() { const box = $('wallChips'); box.innerHTML = ''; state.walls.forEach((w, i) => { const res = state.result ? state.result.walls[i].res : null; const d = document.createElement('button'); d.className = 'wChip' + (i === state.sel ? ' sel' : ''); d.innerHTML = '<span class="wcName">' + esc(w.name) + '</span><span class="wcInfo">' + (res ? res.boards + ' досок · ♻' + res.reused : w.length + '×' + w.height) + '</span>'; d.onclick = () => { state.sel = i; fitView(); updateUI(); }; box.appendChild(d); }); }
+function updateUI() { const res = state.result; $('boardsBadge').textContent = (res ? res.totalBoards : '—') + ' досок'; $('dirNote').textContent = state.orientation === 'vert' ? 'Вертикальная ориентация: стена повёрнута на 90°, «снизу» = справа.' : ''; renderSummary(); renderDb(); renderDetails(); draw(); }
+
+function computeLayout() {
+    const GAP = 300;
+    const layout = [];
+    let x = 0, maxH = 0;
+    for (const w of state.result.walls) {
+        layout.push({ x, w });
+        x += w.origLen + GAP;
+        if (w.origH > maxH) maxH = w.origH;
+    }
+    return { layout, totalW: Math.max(1, x - GAP), maxH: Math.max(1, maxH) };
+}
+
 function chipsHtml(lens) { if (!lens.length) return '<span class="dim">—</span>'; const m = new Map(); lens.forEach(l => m.set(l, (m.get(l) || 0) + 1)); return [...m.entries()].sort((a, b) => b[0] - a[0]).map(en => '<span class="chip">' + en[0] + (en[1] > 1 ? ' ×' + en[1] : '') + '</span>').join(''); }
-function renderSummary() { const res = state.result, box = $('summary'); if (!res) { box.innerHTML = '<span class="dim">Нет данных</span>'; return; } const dbCnt = res.db.start.length + res.db.end.length + res.db.none.length + res.db.forced.length; const dbLen = [...res.db.start, ...res.db.end, ...res.db.none, ...res.db.forced].reduce((t, l) => t + l, 0); box.innerHTML = '<div class="sumBig"><b>' + res.totalBoards + '</b><span>целых заготовок</span></div><div class="statGrid"><div class="statCard"><div class="sv">' + res.cutNew + '</div><div class="sl">резов из новых</div></div><div class="statCard"><div class="sv">' + res.reused + '</div><div class="sl">обрезков применено</div></div><div class="statCard"><div class="sv">' + res.wasteCount + '</div><div class="sl">отходов, шт</div></div><div class="statCard"><div class="sv">' + res.wasteLen + '</div><div class="sl">отходов, мм</div></div></div><div class="sumLine">В базе остатков: ' + dbCnt + ' шт · ' + dbLen + ' мм</div>'; }
+
+function renderSummary() {
+    const res = state.result, box = $('summary');
+    if (!res) { box.innerHTML = '<span class="dim">Нет данных</span>'; return; }
+    let wallArea = 0;
+    for (const tw of res.walls) {
+        let a = tw.origLen * tw.origH;
+        for (const o of tw.ops) a -= o.ow * o.oh;
+        wallArea += a;
+    }
+    const boardArea = res.totalBoards * res.P.L * res.P.W;
+    const wasteArea = boardArea - wallArea;
+    const fmt = v => (v / 1e6).toFixed(2);
+    box.innerHTML = '<div class="sumBig"><b>' + res.totalBoards + '</b><span>целых заготовок</span></div>'
+        + '<div class="statGrid">'
+        + '<div class="statCard"><div class="sv">' + fmt(wallArea) + '</div><div class="sl">м² стен (без проёмов)</div></div>'
+        + '<div class="statCard"><div class="sv">' + fmt(boardArea) + '</div><div class="sl">м² заготовок</div></div>'
+        + '<div class="statCard"><div class="sv">' + fmt(wasteArea) + '</div><div class="sl">м² отходов</div></div>'
+        + '<div class="statCard"><div class="sv">' + res.cutNew + '</div><div class="sl">резов из новых</div></div>'
+        + '</div>';
+}
+
 function renderDb() { const res = state.result, box = $('dbPanel'); if (!res) { box.innerHTML = '<span class="dim">—</span>'; return; } box.innerHTML = '<span class="dbT">С начальным замком → в конец ряда</span>' + chipsHtml(res.db.start) + '<span class="dbT">С конечным замком → в начало ряда</span>' + chipsHtml(res.db.end) + '<span class="dbT">Без замков → короткие подряды</span>' + chipsHtml(res.db.none) + '<span class="dbT">Мелочь → вынужденные короткие куски</span>' + chipsHtml(res.db.forced); }
+
 function pieceToken(pc) { let cls = pc.src === 'whole' ? 'tkWhole' : pc.src === 'reuse' ? 'tkReuse' : 'tkCut'; let title; if (pc.src === 'whole') title = 'Целая заготовка ' + pc.len; else if (pc.src === 'reuse') title = 'Из обрезка БД (' + pc.dbLabel + '), было ' + pc.from + ' → отрезано ' + pc.len; else title = 'Рез из новой заготовки ' + pc.len; if (pc.forced) { cls += ' tkForced'; title += ' · ВЫНУЖДЕННЫЙ (короче мин. отрезка)'; } const mark = pc.src === 'cut' ? '✂' : pc.src === 'reuse' ? '♻' : ''; let style = ''; if (pc.lockL) style += 'border-left:3px solid ' + lockColor(pc.lockL) + ';'; if (pc.lockR) style += 'border-right:3px solid ' + lockColor(pc.lockR) + ';'; return '<span class="tk ' + cls + '" style="' + style + '" title="' + esc(title) + '">' + pc.len + mark + '</span>'; }
-function renderDetails() { const box = $('details'), tt = $('detTitle'); if (!state.result || state.sel < 0) { tt.textContent = 'Детали по рядам'; box.innerHTML = '<span class="dim">Выберите стену</span>'; return; } const w = state.result.walls[state.sel], res = w.res; tt.textContent = 'Ряды — ' + w.name; const dirName = state.direction === 'bottom' ? 'снизу' : 'сверху'; let html = '<div class="dim" style="margin-bottom:8px;font-size:12.5px">очередь ' + res.queue + ' · рядов ' + res.rows.length + ' · заготовок ' + res.boards + ' · ряды идут ' + dirName + '</div>'; for (const row of res.rows) { html += '<div class="rowBlock"><div class="rowHead">Ряд ' + (row.idx + 1) + (row.rowH < state.result.P.W ? ' <span class="dim">(высота ' + Math.round(row.rowH) + ' мм)</span>' : '') + '</div>'; for (const sr of row.subrows) { html += '<div class="srLine"><span class="srRange">' + Math.round(sr.x1) + '–' + Math.round(sr.x2) + '</span>' + sr.pieces.map(pieceToken).join('') + '</div>'; } html += '</div>'; } box.innerHTML = html; }
+
+function renderDetails() {
+    const box = $('details'), tt = $('detTitle');
+    if (!state.result || !state.result.walls.length) { tt.textContent = 'Детали по рядам'; box.innerHTML = '<span class="dim">Нет данных</span>'; return; }
+    tt.textContent = 'Детали по рядам';
+    const dirName = state.direction === 'bottom' ? 'снизу' : 'сверху';
+    let html = '';
+    for (const w of state.result.walls) {
+        const res = w.res;
+        html += '<div class="wallHead">' + esc(w.name) + ' — стена №' + res.queue + '</div>';
+        html += '<div class="dim" style="margin-bottom:8px;font-size:12.5px">рядов ' + res.rows.length + ' · заготовок ' + res.boards + ' · ряды идут ' + dirName + '</div>';
+        for (const row of res.rows) {
+            html += '<div class="rowBlock"><div class="rowHead">Ряд ' + (row.idx + 1) + (row.rowH < state.result.P.W ? ' <span class="dim">(высота ' + Math.round(row.rowH) + ' мм)</span>' : '') + '</div>';
+            for (const sr of row.subrows) { html += '<div class="srLine"><span class="srRange">' + Math.round(sr.x1) + '–' + Math.round(sr.x2) + '</span>' + sr.pieces.map(pieceToken).join('') + '</div>'; }
+            html += '</div>';
+        }
+    }
+    box.innerHTML = html;
+}
+
 function setTab(name) { state.tab = name; document.querySelectorAll('.tabBtn').forEach(b => b.classList.toggle('on', b.dataset.tab === name)); document.querySelectorAll('.tabPage').forEach(p => p.classList.toggle('show', p.dataset.page === name)); $('content').scrollTop = 0; }
 document.querySelectorAll('.tabBtn').forEach(b => b.onclick = () => setTab(b.dataset.tab));
 const cv = $('cv');
 function mapRect(x, y, rw, rh) { if (state.orientation === 'vert') return { x: y, y: x, w: rh, h: rw }; return { x, y, w: rw, h: rh }; }
 function labelPiece(c, x, y, pw, ph, text, wallVert) { if (Math.max(pw, ph) < 6) return; let rot = wallVert; let avail = rot ? ph : pw; const needAt = fs => text.length * fs * 0.62; const perp = rot ? pw : ph; if (needAt(9) > avail && perp > avail) { rot = !rot; avail = perp; } let fs = 10; while (fs > 7 && needAt(fs) > avail - 2) fs -= 0.5; const across = rot ? pw : ph; if (across < fs + 2) fs = Math.max(6.5, across - 1.5); c.save(); c.translate(x + pw / 2, y + ph / 2); if (rot) c.rotate(-Math.PI / 2); c.font = fs.toFixed(1) + 'px sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.lineWidth = 3; c.strokeStyle = 'rgba(0,0,0,.65)'; c.strokeText(text, 0, 0); c.fillStyle = 'rgba(255,255,255,.95)'; c.fillText(text, 0, 0); c.restore(); }
 function drawLocks(c, r, pc, wallVert, X, Y, zoom) { if (!pc.lockL && !pc.lockR) return; const t = Math.max(2, Math.min(7, zoom * 34)); const rw = Math.max(1, r.w * zoom), rh = Math.max(1, r.h * zoom); if (wallVert) { if (pc.lockL) { c.fillStyle = lockColor(pc.lockL); c.fillRect(X(r.x), Y(r.y), rw, t); } if (pc.lockR) { c.fillStyle = lockColor(pc.lockR); c.fillRect(X(r.x), Y(r.y) + rh - t, rw, t); } } else { if (pc.lockL) { c.fillStyle = lockColor(pc.lockL); c.fillRect(X(r.x), Y(r.y), t, rh); } if (pc.lockR) { c.fillStyle = lockColor(pc.lockR); c.fillRect(X(r.x) + rw - t, Y(r.y), t, rh); } } }
-function draw() { const ctx2 = cv.getContext('2d'), dpr = window.devicePixelRatio || 1; const cw = cv.clientWidth, ch = cv.clientHeight; if (cv.width !== Math.round(cw * dpr) || cv.height !== Math.round(ch * dpr)) { cv.width = Math.round(cw * dpr); cv.height = Math.round(ch * dpr); } ctx2.setTransform(dpr, 0, 0, dpr, 0, 0); ctx2.clearRect(0, 0, cw, ch); $('emptyMsg').style.display = state.walls.length ? 'none' : 'flex'; if (!state.result || state.sel < 0) return; const w = state.result.walls[state.sel], v = state.view; const X = x => v.ox + x * v.zoom, Y = y => v.oy + y * v.zoom; const dw = w.origLen, dh = w.origH; ctx2.fillStyle = '#232530'; ctx2.fillRect(X(0), Y(0), dw * v.zoom, dh * v.zoom); const colors = { whole: '#2e7d5b', cut: '#c07a2e', reuse: '#6a5fc7' }; for (const row of w.res.rows) for (const sr of row.subrows) { let px = sr.x1; for (const pc of sr.pieces) { const r = mapRect(px, row.yTop, pc.len, row.rowH); ctx2.fillStyle = colors[pc.src]; ctx2.fillRect(X(r.x) + .5, Y(r.y) + .5, Math.max(1, r.w * v.zoom - 1), Math.max(1, r.h * v.zoom - 1)); drawLocks(ctx2, r, pc, state.orientation === 'vert', X, Y, v.zoom); if (pc.forced) { ctx2.strokeStyle = '#e05555'; ctx2.lineWidth = 2; ctx2.strokeRect(X(r.x) + 1, Y(r.y) + 1, r.w * v.zoom - 2, r.h * v.zoom - 2); } const mark = pc.forced ? '⚠' : pc.src === 'cut' ? '✂' : pc.src === 'reuse' ? '♻' : ''; labelPiece(ctx2, X(r.x), Y(r.y), r.w * v.zoom, r.h * v.zoom, pc.len + mark, state.orientation === 'vert'); px += pc.len; } } for (const o of w.ops) { const r = mapRect(o.x, o.y, o.w, o.h); const x0 = X(r.x), y0 = Y(r.y), ww = r.w * v.zoom, hh = r.h * v.zoom; ctx2.fillStyle = 'rgba(10,11,15,.82)'; ctx2.fillRect(x0, y0, ww, hh); ctx2.save(); ctx2.beginPath(); ctx2.rect(x0, y0, ww, hh); ctx2.clip(); ctx2.strokeStyle = 'rgba(255,255,255,.07)'; ctx2.lineWidth = 1; for (let i = -hh; i < ww; i += 14) { ctx2.beginPath(); ctx2.moveTo(x0 + i, y0 + hh); ctx2.lineTo(x0 + i + hh, y0); ctx2.stroke(); } ctx2.restore(); ctx2.strokeStyle = '#565b6b'; ctx2.setLineDash([5, 4]); ctx2.strokeRect(x0 + .5, y0 + .5, ww - 1, hh - 1); ctx2.setLineDash([]); if (ww > 60 && hh > 16) { ctx2.fillStyle = '#8a90a2'; ctx2.font = '11px sans-serif'; ctx2.textAlign = 'center'; ctx2.textBaseline = 'middle'; ctx2.fillText(ww > 105 && hh > 30 ? 'проём ' + o.ow + '×' + o.oh : 'проём', x0 + ww / 2, y0 + hh / 2); } } ctx2.strokeStyle = '#6a7080'; ctx2.lineWidth = 1.5; ctx2.strokeRect(X(0), Y(0), dw * v.zoom, dh * v.zoom); ctx2.fillStyle = '#9aa1b2'; ctx2.font = '12px sans-serif'; ctx2.textAlign = 'center'; ctx2.fillText('← ' + dw + ' мм →', X(0) + dw * v.zoom / 2, Y(0) + dh * v.zoom + 18); ctx2.save(); ctx2.translate(X(0) - 12, Y(0) + dh * v.zoom / 2); ctx2.rotate(-Math.PI / 2); ctx2.fillText('← ' + dh + ' мм →', 0, 0); ctx2.restore(); $('zoomLbl').textContent = Math.round(v.zoom / (v.fitZoom || 1) * 100) + '%'; }
-function fitView() { if (!state.result || state.sel < 0) return; const w = state.result.walls[state.sel]; const cw = cv.clientWidth || 360, ch = cv.clientHeight || 300, pad = 56; const z = Math.max(.01, Math.min((cw - pad) / w.origLen, (ch - pad) / w.origH)); state.view = { zoom: z, fitZoom: z, ox: (cw - w.origLen * z) / 2, oy: (ch - w.origH * z) / 2 }; }
+
+function drawWallCalc(c, w, offX, v) {
+    const X = gx => v.ox + (offX + gx) * v.zoom;
+    const Y = gy => v.oy + gy * v.zoom;
+    const dw = w.origLen, dh = w.origH;
+    c.fillStyle = '#232530';
+    c.fillRect(X(0), Y(0), dw * v.zoom, dh * v.zoom);
+    const colors = { whole: '#2e7d5b', cut: '#c07a2e', reuse: '#6a5fc7' };
+    for (const row of w.res.rows) for (const sr of row.subrows) {
+        let px = sr.x1;
+        for (const pc of sr.pieces) {
+            const r = mapRect(px, row.yTop, pc.len, row.rowH);
+            c.fillStyle = colors[pc.src];
+            c.fillRect(X(r.x) + .5, Y(r.y) + .5, Math.max(1, r.w * v.zoom - 1), Math.max(1, r.h * v.zoom - 1));
+            drawLocks(c, r, pc, state.orientation === 'vert', X, Y, v.zoom);
+            if (pc.forced) { c.strokeStyle = '#e05555'; c.lineWidth = 2; c.strokeRect(X(r.x) + 1, Y(r.y) + 1, r.w * v.zoom - 2, r.h * v.zoom - 2); }
+            const mark = pc.forced ? '⚠' : pc.src === 'cut' ? '✂' : pc.src === 'reuse' ? '♻' : '';
+            labelPiece(c, X(r.x), Y(r.y), r.w * v.zoom, r.h * v.zoom, pc.len + mark, state.orientation === 'vert');
+            px += pc.len;
+        }
+    }
+    for (const o of w.ops) {
+        const r = mapRect(o.x, o.y, o.w, o.h);
+        const x0 = X(r.x), y0 = Y(r.y), ww = r.w * v.zoom, hh = r.h * v.zoom;
+        c.fillStyle = 'rgba(10,11,15,.82)';
+        c.fillRect(x0, y0, ww, hh);
+        c.save(); c.beginPath(); c.rect(x0, y0, ww, hh); c.clip();
+        c.strokeStyle = 'rgba(255,255,255,.07)'; c.lineWidth = 1;
+        for (let i = -hh; i < ww; i += 14) { c.beginPath(); c.moveTo(x0 + i, y0 + hh); c.lineTo(x0 + i + hh, y0); c.stroke(); }
+        c.restore();
+        c.strokeStyle = '#565b6b'; c.setLineDash([5, 4]); c.strokeRect(x0 + .5, y0 + .5, ww - 1, hh - 1); c.setLineDash([]);
+        if (ww > 60 && hh > 16) { c.fillStyle = '#8a90a2'; c.font = '11px sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(ww > 105 && hh > 30 ? 'проём ' + o.ow + '×' + o.oh : 'проём', x0 + ww / 2, y0 + hh / 2); }
+    }
+    c.strokeStyle = '#8a90a2'; c.lineWidth = 1.5;
+    c.strokeRect(X(0), Y(0), dw * v.zoom, dh * v.zoom);
+    c.fillStyle = '#e8eaf0'; c.font = 'bold 13px sans-serif'; c.textAlign = 'center';
+    c.fillText(w.name, X(0) + dw * v.zoom / 2, Y(0) - 10);
+    c.fillStyle = '#c3c8d4'; c.font = '12px sans-serif';
+    c.fillText('← ' + dw + ' мм →', X(0) + dw * v.zoom / 2, Y(0) + dh * v.zoom + 18);
+    c.save(); c.translate(X(0) - 12, Y(0) + dh * v.zoom / 2); c.rotate(-Math.PI / 2);
+    c.fillText('← ' + dh + ' мм →', 0, 0); c.restore();
+}
+
+function draw() {
+    const ctx2 = cv.getContext('2d'), dpr = window.devicePixelRatio || 1;
+    const cw = cv.clientWidth, ch = cv.clientHeight;
+    if (cv.width !== Math.round(cw * dpr) || cv.height !== Math.round(ch * dpr)) { cv.width = Math.round(cw * dpr); cv.height = Math.round(ch * dpr); }
+    ctx2.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx2.fillStyle = '#4d5462';
+    ctx2.fillRect(0, 0, cw, ch);
+    const hasData = state.result && state.result.walls.length;
+    $('emptyMsg').style.display = hasData ? 'none' : 'flex';
+    if (!hasData) return;
+    const { layout } = computeLayout();
+    const v = state.view;
+    $('zoomLbl').textContent = Math.round(v.zoom / (v.fitZoom || 1) * 100) + '%';
+    for (const item of layout) drawWallCalc(ctx2, item.w, item.x, v);
+}
+
+function fitView() {
+    if (!state.result || !state.result.walls.length) return;
+    const { totalW, maxH } = computeLayout();
+    const cw = cv.clientWidth || 360, ch = cv.clientHeight || 300, pad = 90;
+    const z = Math.max(.01, Math.min((cw - pad) / totalW, (ch - pad) / maxH));
+    state.view = { zoom: z, fitZoom: z, ox: (cw - totalW * z) / 2, oy: (ch - maxH * z) / 2 };
+}
 function clampZoom(z) { const f = state.view.fitZoom || 1; return Math.max(f * .05, Math.min(f * 100, z)); }
 function zoomAt(mx, my, f) { const v = state.view, nz = clampZoom(v.zoom * f), k = nz / v.zoom; v.ox = mx - (mx - v.ox) * k; v.oy = my - (my - v.oy) * k; v.zoom = nz; draw(); }
 let dragging = null;
@@ -772,6 +865,21 @@ cv.addEventListener('touchend', touchEnd); cv.addEventListener('touchcancel', to
 $('zoomIn').onclick = () => zoomAt(cv.clientWidth / 2, cv.clientHeight / 2, 1.3);
 $('zoomOut').onclick = () => zoomAt(cv.clientWidth / 2, cv.clientHeight / 2, 1 / 1.3);
 $('zoomFit').onclick = () => { fitView(); draw(); };
+
+const SPLIT_MIN = 150;
+const splitMax = () => Math.max(SPLIT_MIN, window.innerHeight - 240);
+let splitDrag = null; const splitter = $('vSplitter');
+function splitStart(clientY) { splitDrag = { startY: clientY, startH: cv.clientHeight }; document.body.style.userSelect = 'none'; }
+function splitMove(clientY) { if (!splitDrag) return; const dy = clientY - splitDrag.startY; const newH = clampC(splitDrag.startH + dy, SPLIT_MIN, splitMax()); $('center').style.height = newH + 'px'; fitView(); draw(); }
+function splitEnd() { if (!splitDrag) return; splitDrag = null; document.body.style.userSelect = ''; fitView(); draw(); }
+splitter.addEventListener('mousedown', e => { e.preventDefault(); splitStart(e.clientY); });
+window.addEventListener('mousemove', e => { if (splitDrag) splitMove(e.clientY); });
+window.addEventListener('mouseup', splitEnd);
+splitter.addEventListener('touchstart', e => { e.preventDefault(); splitStart(e.touches[0].clientY); }, { passive: false });
+window.addEventListener('touchmove', e => { if (splitDrag) { e.preventDefault(); splitMove(e.touches[0].clientY); } }, { passive: false });
+splitter.addEventListener('touchend', splitEnd); splitter.addEventListener('touchcancel', splitEnd);
+function reclampCenter() { const center = $('center'); const h = center.getBoundingClientRect().height; if (h > splitMax()) center.style.height = splitMax() + 'px'; else if (h < SPLIT_MIN) center.style.height = SPLIT_MIN + 'px'; }
+
 document.querySelectorAll('#pageParams input').forEach(inp => inp.addEventListener('input', () => { recalc(); fitView(); }));
 function segSet(val, pair) { state[pair.key] = val; $(pair.a).classList.toggle('on', val === pair.va); $(pair.b).classList.toggle('on', val === pair.vb); recalc(); fitView(); }
 const orPair = { key: 'orientation', a: 'oH', b: 'oV', va: 'horiz', vb: 'vert' };
@@ -780,8 +888,8 @@ $('oH').onclick = () => segSet('horiz', orPair);
 $('oV').onclick = () => segSet('vert', orPair);
 $('dH').onclick = () => segSet('bottom', dirPair);
 $('dT').onclick = () => segSet('top', dirPair);
-window.addEventListener('resize', () => { fitView(); draw(); });
-window.addEventListener('orientationchange', () => setTimeout(() => { fitView(); draw(); }, 250));
+window.addEventListener('resize', () => { reclampCenter(); fitView(); draw(); });
+window.addEventListener('orientationchange', () => setTimeout(() => { reclampCenter(); fitView(); draw(); }, 250));
 updateUI();
 <\/script>
 </body>
